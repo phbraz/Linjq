@@ -25,6 +25,7 @@ io/linjq/expression/GroupJoinExpression.class
 io/linjq/expression/ExpressionType.class
 io/linjq/core/Queryable$10.class
 io/linjq/expression/JoinExpression.class
+io/linjq/Linjq.class
 io/linjq/core/Queryable$3.class
 io/linjq/functional/Function.class
 io/linjq/expression/CrossJoinExpression.class

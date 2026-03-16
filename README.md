@@ -2,7 +2,7 @@
 
 LINQ-style fluent query API for Java 21+. Build composable queries over any `Iterable`, execute in-memory or plug in your own backend (e.g. SQL) via the provider model.
 
-- **In-memory** — `Queryable.from(iterable)` runs all operations in memory with lazy iteration where possible.
+- **In-memory** — Use `from(iterable)` (static import) or `Queryable.from(iterable)`; runs in memory with lazy iteration where possible.
 - **Provider model** — `ProviderQueryable` + `QueryProvider` build expression trees; execution is delegated to a provider (e.g. `InMemoryQueryProvider` or a future SQL translator).
 
 ## Requirements
@@ -34,8 +34,10 @@ mvn install
 
 ## Quick start
 
+Add a **static import** so you can write `from(people).where(...)` instead of `Queryable.from(people).where(...)`:
+
 ```java
-import io.linjq.core.Queryable;
+import static io.linjq.Linjq.from;
 import java.util.List;
 
 record Person(String name, int age, String city) {}
@@ -46,7 +48,7 @@ List<Person> people = List.of(
     new Person("Charlie", 35, "London")
 );
 
-List<String> names = Queryable.from(people)
+List<String> names = from(people)
     .where(p -> p.age() >= 30)
     .orderBy(Person::name)
     .select(Person::name)
@@ -54,6 +56,8 @@ List<String> names = Queryable.from(people)
     .toList();
 // → ["Alice", "Charlie"]
 ```
+
+You can also use `from(...)` directly if you prefer.
 
 ---
 
@@ -63,14 +67,17 @@ List<String> names = Queryable.from(people)
 
 | Method | Description |
 |--------|-------------|
-| `Queryable.from(Iterable<T>)` | Create an in-memory query over a source. |
-| `ProviderQueryable.from(QueryProvider, Iterable<T>)` | Create a provider-backed query (builds expression tree). |
+| `from(Iterable<T>)` | In-memory query (use `import static io.linjq.Linjq.from;`). |
+| `Queryable.from(Iterable<T>)` | Same, without static import. |
+| `ProviderQueryable.from(QueryProvider, Iterable<T>)` | Provider-backed query (builds expression tree). |
 | `ProviderQueryable.from(QueryProvider, Iterable<T>, String alias)` | Same with a source alias (e.g. table name). |
 
-**Example — in-memory:**
+**Example — in-memory (with static import):**
 
 ```java
-var query = Queryable.from(List.of(1, 2, 3, 4, 5));
+import static io.linjq.Linjq.from;
+
+var query = from(List.of(1, 2, 3, 4, 5));
 ```
 
 **Example — provider (expression tree):**
@@ -90,11 +97,11 @@ QueryExpression<?> expr = query.getExpression(); // inspect tree
 Keeps only elements that satisfy the predicate.
 
 ```java
-Queryable.from(people)
+from(people)
     .where(p -> p.age() > 25)
     .toList();
 
-Queryable.from(List.of(1, 2, 3, 4, 5))
+from(List.of(1, 2, 3, 4, 5))
     .where(n -> n % 2 == 0)
     .toList();  // [2, 4]
 ```
@@ -108,11 +115,11 @@ Queryable.from(List.of(1, 2, 3, 4, 5))
 Maps each element to a new value.
 
 ```java
-Queryable.from(people)
+from(people)
     .select(Person::name)
     .toList();  // ["Alice", "Bob", "Charlie", ...]
 
-Queryable.from(people)
+from(people)
     .select(p -> p.name() + " (" + p.age() + ")")
     .toList();
 ```
@@ -123,11 +130,11 @@ Maps each element to a sequence and flattens the result (flatMap).
 
 ```java
 var words = List.of("hello", "world");
-Queryable.from(words)
+from(words)
     .selectMany(s -> List.of(s.split("")))
     .toList();  // ["h","e","l","l","o","w","o","r","l","d"]
 
-Queryable.from(people)
+from(people)
     .selectMany(p -> List.of(p.name(), p.city()))
     .toList();
 ```
@@ -141,12 +148,12 @@ Queryable.from(people)
 Sort by a comparable key. Return an `OrderedQueryable<T>`.
 
 ```java
-Queryable.from(people)
+from(people)
     .orderBy(Person::name)
     .select(Person::name)
     .toList();  // alphabetical by name
 
-Queryable.from(people)
+from(people)
     .orderByDescending(Person::age)
     .take(2)
     .select(Person::name)
@@ -158,7 +165,7 @@ Queryable.from(people)
 Secondary sort key (use after `orderBy` / `orderByDescending`).
 
 ```java
-Queryable.from(people)
+from(people)
     .orderBy(Person::city)
     .thenBy(Person::name)
     .select(p -> p.city() + " - " + p.name())
@@ -174,7 +181,7 @@ Queryable.from(people)
 Groups elements by key. Returns `Queryable<Grouping<K, T>>`; each `Grouping<K, T>` has `key()` and is `Iterable<T>`.
 
 ```java
-var byCity = Queryable.from(people)
+var byCity = from(people)
     .groupBy(Person::city)
     .toList();
 
@@ -201,7 +208,7 @@ var orders = List.of(
     new Order("Bob", 200.0)
 );
 
-Queryable.from(people)
+from(people)
     .join(orders, Person::name, Order::customer,
           (p, o) -> p.name() + " => $" + o.amount())
     .toList();
@@ -213,7 +220,7 @@ Queryable.from(people)
 Like inner join, but every outer row appears once; if no match, inner is `null`.
 
 ```java
-Queryable.from(people)
+from(people)
     .leftJoin(orders, Person::name, Order::customer,
               (p, o) -> p.name() + ": " + (o != null ? o.amount() : "no orders"))
     .toList();
@@ -225,7 +232,7 @@ Queryable.from(people)
 For each outer element, groups all matching inner elements into a `Queryable<TInner>` and passes it to the result selector.
 
 ```java
-Queryable.from(people)
+from(people)
     .groupJoin(orders, Person::name, Order::customer,
                (p, orderQuery) -> p.name() + " has " + orderQuery.toList().size() + " order(s)")
     .toList();
@@ -238,7 +245,7 @@ Every pair (outer, inner); result selector builds each row.
 ```java
 var a = List.of("X", "Y");
 var b = List.of(1, 2);
-Queryable.from(a)
+from(a)
     .crossJoin(b, (s, n) -> s + n)
     .toList();  // ["X1", "X2", "Y1", "Y2"]
 ```
@@ -252,8 +259,8 @@ Queryable.from(a)
 First `n` elements.
 
 ```java
-Queryable.from(people).take(2).toList();
-Queryable.from(List.of(1, 2, 3, 4, 5)).take(3).toList();  // [1, 2, 3]
+from(people).take(2).toList();
+from(List.of(1, 2, 3, 4, 5)).take(3).toList();  // [1, 2, 3]
 ```
 
 #### `skip(int n)`
@@ -261,8 +268,8 @@ Queryable.from(List.of(1, 2, 3, 4, 5)).take(3).toList();  // [1, 2, 3]
 Skips the first `n` elements.
 
 ```java
-Queryable.from(List.of(1, 2, 3, 4, 5)).skip(2).toList();  // [3, 4, 5]
-Queryable.from(people).skip(1).take(2).toList();         // pagination
+from(List.of(1, 2, 3, 4, 5)).skip(2).toList();  // [3, 4, 5]
+from(people).skip(1).take(2).toList();         // pagination
 ```
 
 ---
@@ -274,8 +281,8 @@ Queryable.from(people).skip(1).take(2).toList();         // pagination
 Removes duplicates (order preserved by insertion).
 
 ```java
-Queryable.from(List.of(1, 2, 2, 3, 3, 3)).distinct().toList();  // [1, 2, 3]
-Queryable.from(people).select(Person::city).distinct().toList();  // unique cities
+from(List.of(1, 2, 2, 3, 3, 3)).distinct().toList();  // [1, 2, 3]
+from(people).select(Person::city).distinct().toList();  // unique cities
 ```
 
 #### `union(Iterable<T>)`
@@ -283,7 +290,7 @@ Queryable.from(people).select(Person::city).distinct().toList();  // unique citi
 Set union: all elements from both, duplicates removed.
 
 ```java
-Queryable.from(List.of(1, 2, 3))
+from(List.of(1, 2, 3))
     .union(List.of(3, 4, 5))
     .toList();  // [1, 2, 3, 4, 5]
 ```
@@ -293,7 +300,7 @@ Queryable.from(List.of(1, 2, 3))
 Set intersection: elements that appear in both.
 
 ```java
-Queryable.from(List.of(1, 2, 3))
+from(List.of(1, 2, 3))
     .intersect(List.of(2, 3, 4))
     .toList();  // [2, 3]
 ```
@@ -303,7 +310,7 @@ Queryable.from(List.of(1, 2, 3))
 Set difference: elements in the first sequence but not in the second.
 
 ```java
-Queryable.from(List.of(1, 2, 3, 4))
+from(List.of(1, 2, 3, 4))
     .except(List.of(2, 4))
     .toList();  // [1, 3]
 ```
@@ -313,7 +320,7 @@ Queryable.from(List.of(1, 2, 3, 4))
 Concatenates two sequences (keeps duplicates, order preserved).
 
 ```java
-Queryable.from(List.of(1, 2))
+from(List.of(1, 2))
     .concat(List.of(3, 4))
     .toList();  // [1, 2, 3, 4]
 ```
@@ -327,7 +334,7 @@ Queryable.from(List.of(1, 2))
 Splits the sequence into chunks of the given size. Returns `Queryable<List<T>>`.
 
 ```java
-Queryable.from(List.of(1, 2, 3, 4, 5))
+from(List.of(1, 2, 3, 4, 5))
     .chunk(2)
     .toList();
 // [[1, 2], [3, 4], [5]]
@@ -338,7 +345,7 @@ Queryable.from(List.of(1, 2, 3, 4, 5))
 Reverses the order of elements.
 
 ```java
-Queryable.from(List.of(1, 2, 3)).reverse().toList();  // [3, 2, 1]
+from(List.of(1, 2, 3)).reverse().toList();  // [3, 2, 1]
 ```
 
 ---
@@ -352,9 +359,9 @@ Queryable.from(List.of(1, 2, 3)).reverse().toList();  // [3, 2, 1]
 | `iterator()` | Returns an iterator (e.g. for `for (T x : query)`). |
 
 ```java
-List<Person> list = Queryable.from(people).where(p -> p.age() > 30).toList();
-Person first = Queryable.from(people).orderBy(Person::name).first();
-for (Person p : Queryable.from(people).take(5)) {
+List<Person> list = from(people).where(p -> p.age() > 30).toList();
+Person first = from(people).orderBy(Person::name).first();
+for (Person p : from(people).take(5)) {
     // ...
 }
 ```
@@ -367,7 +374,7 @@ When you use `ProviderQueryable`, each call (e.g. `where`, `select`, `take`) doe
 
 ### InMemoryQueryProvider
 
-Runs the expression tree in memory by interpreting it (same semantics as `Queryable.from(...)`).
+Runs the expression tree in memory by interpreting it (same semantics as `from(iterable)`).
 
 ```java
 import io.linjq.provider.InMemoryQueryProvider;
@@ -411,4 +418,4 @@ Use `ExpressionVisitor` to walk the tree and produce SQL (or another representat
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) or the project root.
+MIT
