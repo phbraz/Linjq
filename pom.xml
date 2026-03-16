@@ -6,12 +6,12 @@
 
     <groupId>io.linjq</groupId>
     <artifactId>linjq</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>LINJQ</name>
     <description>Language Integrated Java Query — LINQ-style fluent query API for Java 21+</description>
-    <url>https://github.com/YOUR_USERNAME/linjq</url>
+    <url>https://github.com/phbraz/Linjq</url>
 
     <licenses>
         <license>
@@ -23,9 +23,9 @@
 
     <developers>
         <developer>
-            <id>YOUR_ID</id>
-            <name>YOUR_NAME</name>
-            <email>YOUR_EMAIL</email>
+            <id>01</id>
+            <name>ph</name>
+            <email></email>
         </developer>
     </developers>
 

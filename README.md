@@ -415,7 +415,6 @@ public class SqlQueryProvider implements QueryProvider {
 Use `ExpressionVisitor` to walk the tree and produce SQL (or another representation).
 
 ---
-
 ## License
 
 MIT
