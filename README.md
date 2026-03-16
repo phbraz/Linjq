@@ -16,7 +16,7 @@ LINQ-style fluent query API for Java 21+. Build composable queries over any `Ite
 
 ```xml
 <dependency>
-    <groupId>io.linjq</groupId>
+    <groupId>net.linjq</groupId>
     <artifactId>linjq</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
@@ -37,7 +37,7 @@ mvn install
 Add a **static import** so you can write `from(people).where(...)` instead of `Queryable.from(people).where(...)`:
 
 ```java
-import static io.linjq.Linjq.from;
+import static net.linjq.Linjq.from;
 import java.util.List;
 
 record Person(String name, int age, String city) {}
@@ -67,7 +67,7 @@ You can also use `from(...)` directly if you prefer.
 
 | Method | Description |
 |--------|-------------|
-| `from(Iterable<T>)` | In-memory query (use `import static io.linjq.Linjq.from;`). |
+| `from(Iterable<T>)` | In-memory query (use `import static net.linjq.Linjq.from;`). |
 | `Queryable.from(Iterable<T>)` | Same, without static import. |
 | `ProviderQueryable.from(QueryProvider, Iterable<T>)` | Provider-backed query (builds expression tree). |
 | `ProviderQueryable.from(QueryProvider, Iterable<T>, String alias)` | Same with a source alias (e.g. table name). |
@@ -75,7 +75,7 @@ You can also use `from(...)` directly if you prefer.
 **Example — in-memory (with static import):**
 
 ```java
-import static io.linjq.Linjq.from;
+import static net.linjq.Linjq.from;
 
 var query = from(List.of(1, 2, 3, 4, 5));
 ```
@@ -377,8 +377,8 @@ When you use `ProviderQueryable`, each call (e.g. `where`, `select`, `take`) doe
 Runs the expression tree in memory by interpreting it (same semantics as `from(iterable)`).
 
 ```java
-import io.linjq.provider.InMemoryQueryProvider;
-import io.linjq.provider.ProviderQueryable;
+import net.linjq.provider.InMemoryQueryProvider;
+import net.linjq.provider.ProviderQueryable;
 
 var provider = new InMemoryQueryProvider();
 var query = ProviderQueryable.from(provider, people)
@@ -415,7 +415,6 @@ public class SqlQueryProvider implements QueryProvider {
 Use `ExpressionVisitor` to walk the tree and produce SQL (or another representation).
 
 ---
-
 ## License
 
 MIT
