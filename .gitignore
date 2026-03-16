@@ -1,0 +1,29 @@
+# Maven
+target/
+pom.xml.tag
+pom.releaseBackup
+release.properties
+
+# Build
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cursor / editor
+.cursor/

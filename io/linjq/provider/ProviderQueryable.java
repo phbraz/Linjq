@@ -1,6 +1,7 @@
 package io.linjq.provider;
 
 import io.linjq.core.Grouping;
+import io.linjq.core.OrderedQueryable;
 import io.linjq.core.Queryable;
 import io.linjq.expression.*;
 import io.linjq.functional.BiFunction;
@@ -103,16 +104,24 @@ public class ProviderQueryable<T> extends Queryable<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <K extends Comparable<K>> ProviderQueryable<T> orderBy(KeySelector<T, K> keySelector) {
+    public <K extends Comparable<K>> OrderedQueryable<T> orderBy(KeySelector<T, K> keySelector) {
         Objects.requireNonNull(keySelector);
-        return provider.createQuery(new OrderByExpression<>(expression, keySelector, false));
+        var providerQuery = provider.createQuery(new OrderByExpression<>(expression, keySelector, false));
+        return new OrderedQueryable<>(providerQuery, (a, b) -> {
+            try { return keySelector.select(a).compareTo(keySelector.select(b)); }
+            catch (Exception e) { throw new io.linjq.exceptions.LinjqException("Error in orderBy", e); }
+        });
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <K extends Comparable<K>> ProviderQueryable<T> orderByDescending(KeySelector<T, K> keySelector) {
+    public <K extends Comparable<K>> OrderedQueryable<T> orderByDescending(KeySelector<T, K> keySelector) {
         Objects.requireNonNull(keySelector);
-        return provider.createQuery(new OrderByExpression<>(expression, keySelector, true));
+        var providerQuery = provider.createQuery(new OrderByExpression<>(expression, keySelector, true));
+        return new OrderedQueryable<>(providerQuery, (a, b) -> {
+            try { return keySelector.select(b).compareTo(keySelector.select(a)); }
+            catch (Exception e) { throw new io.linjq.exceptions.LinjqException("Error in orderByDescending", e); }
+        });
     }
 
     @Override

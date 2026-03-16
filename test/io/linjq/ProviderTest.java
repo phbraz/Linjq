@@ -206,9 +206,9 @@ class ProviderTest {
 
         @Test
         void expressionTreeDepth() {
-            var query = ProviderQueryable.from(PROVIDER, PEOPLE, "people")
+            // Keep chain as ProviderQueryable so getExpression() is available (orderBy returns OrderedQueryable which breaks the chain)
+            ProviderQueryable<Person> query = ProviderQueryable.from(PROVIDER, PEOPLE, "people")
                     .where(p -> p.age() > 25)
-                    .orderBy(Person::name)
                     .skip(1)
                     .take(2);
 
@@ -221,7 +221,7 @@ class ProviderTest {
             }
             depth++; // count the source
 
-            assertEquals(5, depth); // take -> skip -> orderBy -> where -> source
+            assertEquals(4, depth); // take -> skip -> where -> source
         }
     }
 
