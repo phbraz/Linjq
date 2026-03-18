@@ -1,5 +1,7 @@
 # LINJQ — Language Integrated Java Query
 
+I was a bit sick of Java and how it handles collections and how you interact with them. If you're coming from .NET, this should feel really familiar to LINQ, hence the play on the project name. With that out of the way, please feel free to use it and provide suggestions for improvements if you ever find this repo.
+
 LINQ-style fluent query API for Java 21+. Build composable queries over any `Iterable`, execute in-memory or plug in your own backend (e.g. SQL) via the provider model.
 
 - **In-memory** — Use `from(iterable)` (static import) or `Queryable.from(iterable)`; runs in memory with lazy iteration where possible.
