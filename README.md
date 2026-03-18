@@ -25,7 +25,7 @@ LINQ-style fluent query API for Java 21+. Build composable queries over any `Ite
 ### Build from source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/linjq.git
+git clone https://github.com/phbraz/linjq.git
 cd linjq
 mvn install
 ```
