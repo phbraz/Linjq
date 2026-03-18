@@ -18,7 +18,7 @@ LINQ-style fluent query API for Java 21+. Build composable queries over any `Ite
 <dependency>
     <groupId>net.linjq</groupId>
     <artifactId>linjq</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
