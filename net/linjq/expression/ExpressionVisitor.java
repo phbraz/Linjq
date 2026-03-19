@@ -40,6 +40,7 @@ public abstract class ExpressionVisitor<R> {
             case WhereExpression<?> e -> visitWhere(e);
             case SelectExpression<?, ?> e -> visitSelect(e);
             case SelectManyExpression<?, ?> e -> visitSelectMany(e);
+            case SelectManyIndexedExpression<?, ?> e -> visitSelectManyIndexed(e);
             case OrderByExpression<?, ?> e -> visitOrderBy(e);
             case ThenByExpression<?, ?> e -> visitThenBy(e);
             case GroupByExpression<?, ?> e -> visitGroupBy(e);
@@ -65,6 +66,7 @@ public abstract class ExpressionVisitor<R> {
     protected abstract R visitWhere(WhereExpression<?> expr);
     protected abstract R visitSelect(SelectExpression<?, ?> expr);
     protected abstract R visitSelectMany(SelectManyExpression<?, ?> expr);
+    protected abstract R visitSelectManyIndexed(SelectManyIndexedExpression<?, ?> expr);
     protected abstract R visitOrderBy(OrderByExpression<?, ?> expr);
     protected abstract R visitThenBy(ThenByExpression<?, ?> expr);
     protected abstract R visitGroupBy(GroupByExpression<?, ?> expr);

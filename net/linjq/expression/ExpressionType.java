@@ -9,6 +9,7 @@ public enum ExpressionType {
     WHERE,
     SELECT,
     SELECT_MANY,
+    SELECT_MANY_INDEXED,
     ORDER_BY,
     ORDER_BY_DESCENDING,
     THEN_BY,

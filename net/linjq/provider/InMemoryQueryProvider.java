@@ -46,6 +46,11 @@ public class InMemoryQueryProvider implements QueryProvider {
                 yield Queryable.from((Iterable<Object>) evaluate(sme.source())).selectMany(sme.selector());
             }
 
+            case SelectManyIndexedExpression<?, ?> e -> {
+                var smie = (SelectManyIndexedExpression<Object, T>) e;
+                yield Queryable.from((Iterable<Object>) evaluate(smie.source())).selectManyIndexed(smie.selector());
+            }
+
             case OrderByExpression<?, ?> e -> {
                 var oe = (OrderByExpression<T, ?>) e;
                 yield evaluateOrderBy(oe);

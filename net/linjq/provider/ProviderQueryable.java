@@ -103,6 +103,12 @@ public class ProviderQueryable<T> extends Queryable<T> {
     }
 
     @Override
+    public <R> ProviderQueryable<R> selectManyIndexed(BiFunction<T, Integer, Iterable<R>> selector) {
+        Objects.requireNonNull(selector);
+        return provider.createQuery(new SelectManyIndexedExpression<>(expression, selector));
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public <K extends Comparable<K>> OrderedQueryable<T> orderBy(KeySelector<T, K> keySelector) {
         Objects.requireNonNull(keySelector);

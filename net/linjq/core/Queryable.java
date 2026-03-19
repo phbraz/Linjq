@@ -289,6 +289,53 @@ public class Queryable<T> implements Iterable<T> {
         });
     }
 
+    public <R> Queryable<R> selectManyIndexed(BiFunction<T, Integer, Iterable<R>> selector) {
+        Objects.requireNonNull(selector);
+        return fromIterable(() -> {
+            Iterator<T> it = source.iterator();
+            return new Iterator<>() {
+                Iterator<R> inner;
+                R next;
+                boolean loaded;
+                int index;
+
+                private void advance() {
+                    try {
+                        while (inner != null && inner.hasNext()) {
+                            next = inner.next();
+                            loaded = true;
+                            return;
+                        }
+                        while (it.hasNext()) {
+                            inner = selector.apply(it.next(), index++).iterator();
+                            if (inner.hasNext()) {
+                                next = inner.next();
+                                loaded = true;
+                                return;
+                            }
+                        }
+                        loaded = false;
+                    } catch (Exception e) { throw propagate(e); }
+                }
+
+                @Override
+                public boolean hasNext() {
+                    if (loaded) return true;
+                    advance();
+                    return loaded;
+                }
+
+                @Override
+                public R next() {
+                    if (!loaded) advance();
+                    if (!loaded) throw new NoSuchElementException();
+                    loaded = false;
+                    return next;
+                }
+            };
+        });
+    }
+    
     // ─── Ordering ──────────────────────────────────────────────────────────
 
     public <K extends Comparable<K>> OrderedQueryable<T> orderBy(KeySelector<T, K> keySelector) {
