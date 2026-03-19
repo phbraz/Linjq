@@ -39,7 +39,7 @@ import java.util.Objects;
  */
 public sealed interface QueryExpression<T>
         permits SourceExpression, WhereExpression, SelectExpression, SelectManyExpression,
-                OrderByExpression, ThenByExpression, GroupByExpression,
+                SelectManyIndexedExpression, OrderByExpression, ThenByExpression, GroupByExpression,
                 JoinExpression, LeftJoinExpression, GroupJoinExpression, CrossJoinExpression,
                 TakeExpression, SkipExpression, DistinctExpression,
                 UnionExpression, IntersectExpression, ExceptExpression, ConcatExpression,

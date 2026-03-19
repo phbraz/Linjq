@@ -127,6 +127,7 @@ class ProviderTest {
                 @Override protected Void visitTake(TakeExpression<?> e) { types.add(e.type()); visit(e.source()); return null; }
                 @Override protected Void visitSelect(SelectExpression<?, ?> e) { types.add(e.type()); return null; }
                 @Override protected Void visitSelectMany(SelectManyExpression<?, ?> e) { return null; }
+                @Override protected Void visitSelectManyIndexed(SelectManyIndexedExpression<?, ?> e) { return null; }
                 @Override protected Void visitOrderBy(OrderByExpression<?, ?> e) { return null; }
                 @Override protected Void visitThenBy(ThenByExpression<?, ?> e) { return null; }
                 @Override protected Void visitGroupBy(GroupByExpression<?, ?> e) { return null; }
@@ -161,6 +162,7 @@ class ProviderTest {
                 @Override protected String visitTake(TakeExpression<?> e) { return visit(e.source()) + " | LIMIT " + e.count(); }
                 @Override protected String visitSelect(SelectExpression<?, ?> e) { return visit(e.source()) + " | SELECT"; }
                 @Override protected String visitSelectMany(SelectManyExpression<?, ?> e) { return ""; }
+                @Override protected String visitSelectManyIndexed(SelectManyIndexedExpression<?, ?> e) { return ""; }
                 @Override protected String visitOrderBy(OrderByExpression<?, ?> e) { return visit(e.source()) + " | ORDER BY"; }
                 @Override protected String visitThenBy(ThenByExpression<?, ?> e) { return ""; }
                 @Override protected String visitGroupBy(GroupByExpression<?, ?> e) { return ""; }
@@ -352,6 +354,16 @@ class ProviderTest {
                     .toList();
 
             assertEquals(List.of("X1", "X2", "Y1", "Y2"), result);
+        }
+
+        @Test
+        void selectManyIndexedExecutes() {
+            // Each string expands to (char + index) for each character; index is 0, 1, 2...
+            var result = ProviderQueryable.from(PROVIDER, List.of("ab", "c", "def"))
+                    .selectManyIndexed((s, i) -> s.chars().mapToObj(c -> (char) c + String.valueOf(i)).toList())
+                    .toList();
+
+            assertEquals(List.of("a0", "b0", "c1", "d2", "e2", "f2"), result);
         }
 
         @Test
