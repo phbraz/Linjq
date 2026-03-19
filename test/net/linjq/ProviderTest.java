@@ -421,5 +421,225 @@ class ProviderTest {
 
             assertEquals(direct, viaProvider);
         }
+
+        // ═══ Terminal operations (inherited from Queryable) ═══
+
+        @Test
+        void firstOrDefault_nonEmpty_returnsFirst() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.age() >= 30)
+                    .firstOrDefault();
+
+            assertTrue(result.isPresent());
+            assertEquals(new Person("Alice", 30, "London"), result.get());
+        }
+
+        @Test
+        void firstOrDefault_empty_returnsEmpty() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.age() > 100)
+                    .firstOrDefault();
+
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void single_oneElement_returnsElement() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.name().equals("Bob"))
+                    .single();
+
+            assertEquals(new Person("Bob", 25, "Paris"), result);
+        }
+
+        @Test
+        void single_empty_throws() {
+            assertThrows(java.util.NoSuchElementException.class, () ->
+                    ProviderQueryable.from(PROVIDER, PEOPLE)
+                            .where(p -> p.age() > 100)
+                            .single());
+        }
+
+        @Test
+        void single_multiple_throws() {
+            assertThrows(IllegalStateException.class, () ->
+                    ProviderQueryable.from(PROVIDER, PEOPLE)
+                            .where(p -> p.age() >= 25)
+                            .single());
+        }
+
+        @Test
+        void singleOrDefault_oneElement_returnsElement() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.name().equals("Diana"))
+                    .singleOrDefault();
+
+            assertTrue(result.isPresent());
+            assertEquals(new Person("Diana", 28, "Berlin"), result.get());
+        }
+
+        @Test
+        void singleOrDefault_empty_returnsEmpty() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.age() < 0)
+                    .singleOrDefault();
+
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void singleOrDefault_multiple_throws() {
+            assertThrows(IllegalStateException.class, () ->
+                    ProviderQueryable.from(PROVIDER, PEOPLE)
+                            .where(p -> p.city().equals("Paris"))
+                            .singleOrDefault());
+        }
+
+        @Test
+        void count_returnsCorrectSize() {
+            var n = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.city().equals("London"))
+                    .count();
+
+            assertEquals(2, n);
+        }
+
+        @Test
+        void count_empty_returnsZero() {
+            var n = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.age() > 100)
+                    .count();
+
+            assertEquals(0, n);
+        }
+
+        @Test
+        void count_fullSource() {
+            assertEquals(5, ProviderQueryable.from(PROVIDER, PEOPLE).count());
+        }
+
+        @Test
+        void any_nonEmpty_returnsTrue() {
+            assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE).any());
+            assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE).where(p -> p.age() >= 25).any());
+        }
+
+        @Test
+        void any_empty_returnsFalse() {
+            assertFalse(ProviderQueryable.from(PROVIDER, List.<Person>of()).any());
+            assertFalse(ProviderQueryable.from(PROVIDER, PEOPLE).where(p -> p.age() > 100).any());
+        }
+
+        @Test
+        void any_withPredicate_match_returnsTrue() {
+            assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .any(p -> p.name().equals("Charlie")));
+        }
+
+        @Test
+        void any_withPredicate_noMatch_returnsFalse() {
+            assertFalse(ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .any(p -> p.age() > 100));
+        }
+
+        @Test
+        void all_allMatch_returnsTrue() {
+            assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .all(p -> p.age() >= 25));
+        }
+
+        @Test
+        void all_oneFails_returnsFalse() {
+            assertFalse(ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .all(p -> p.city().equals("London")));
+        }
+
+        @Test
+        void all_empty_returnsTrue() {
+            assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.age() > 100)
+                    .all(p -> false));
+        }
+
+        @Test
+        void minBy_returnsElementWithMinKey() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .minBy(Person::age);
+
+            assertTrue(result.isPresent());
+            assertEquals(25, result.get().age());
+            assertTrue(List.of(new Person("Bob", 25, "Paris"), new Person("Eve", 25, "Paris")).contains(result.get()));
+        }
+
+        @Test
+        void minBy_empty_returnsEmpty() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .where(p -> p.age() > 100)
+                    .minBy(Person::age);
+
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void minBy_withSelector() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .minBy(Person::name);
+
+            assertTrue(result.isPresent());
+            assertEquals("Alice", result.get().name());
+        }
+
+        @Test
+        void maxBy_returnsElementWithMaxKey() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .maxBy(Person::age);
+
+            assertTrue(result.isPresent());
+            assertEquals(35, result.get().age());
+            assertEquals("Charlie", result.get().name());
+        }
+
+        @Test
+        void maxBy_empty_returnsEmpty() {
+            var result = ProviderQueryable.from(PROVIDER, List.<Person>of())
+                    .maxBy(Person::age);
+
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void maxBy_withSelector() {
+            var result = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .maxBy(Person::name);
+
+            assertTrue(result.isPresent());
+            assertEquals("Eve", result.get().name());
+        }
+
+        @Test
+        void aggregate_sum() {
+            var sum = ProviderQueryable.from(PROVIDER, List.of(1, 2, 3, 4, 5))
+                    .aggregate(0, Integer::sum);
+
+            assertEquals(15, sum);
+        }
+
+        @Test
+        void aggregate_stringConcat() {
+            var names = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .select(Person::name)
+                    .aggregate(new StringBuilder(), (sb, name) -> sb.length() > 0 ? sb.append(",").append(name) : sb.append(name))
+                    .toString();
+
+            assertEquals("Alice,Bob,Charlie,Diana,Eve", names);
+        }
+
+        @Test
+        void aggregate_empty_returnsSeed() {
+            var result = ProviderQueryable.from(PROVIDER, List.<Integer>of())
+                    .aggregate(42, Integer::sum);
+
+            assertEquals(42, result);
+        }
     }
 }

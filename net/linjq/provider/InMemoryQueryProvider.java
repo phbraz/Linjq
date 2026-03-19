@@ -1,32 +1,15 @@
 package net.linjq.provider;
 
+import net.linjq.core.OrderedQueryable;
 import net.linjq.core.Queryable;
+import net.linjq.exceptions.LinjqException;
 import net.linjq.expression.*;
+
+import java.util.Comparator;
 
 /**
  * A reference {@link QueryProvider} implementation that executes expression trees
  * in-memory using the existing Queryable engine.
- *
- * <p>This serves two purposes:</p>
- * <ul>
- *   <li>Proves the expression tree / provider architecture works end-to-end</li>
- *   <li>Provides a working baseline for providers to reference</li>
- * </ul>
- *
- * <h2>Usage</h2>
- * <pre>{@code
- * var provider = new InMemoryQueryProvider();
- * var query = ProviderQueryable.from(provider, people)
- *     .where(p -> p.age() > 18)
- *     .orderBy(Person::name)
- *     .take(10);
- *
- * // Inspect the expression tree
- * var expr = query.getExpression();
- *
- * // Execute via the provider
- * var results = query.toList();
- * }</pre>
  */
 public class InMemoryQueryProvider implements QueryProvider {
 
@@ -40,9 +23,11 @@ public class InMemoryQueryProvider implements QueryProvider {
         return new ProviderQueryable<>(this, expression);
     }
 
-    /**
-     * Recursively evaluates an expression tree using Queryable operations.
-     */
+    private static RuntimeException propagate(Exception e) {
+        if (e instanceof RuntimeException re) return re;
+        return new LinjqException(e);
+    }
+
     @SuppressWarnings("unchecked")
     private <T> Iterable<T> evaluate(QueryExpression<T> expression) {
         return switch (expression) {
@@ -134,24 +119,60 @@ public class InMemoryQueryProvider implements QueryProvider {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private <T> Iterable<T> evaluateOrderBy(OrderByExpression<T, ?> expr) {
         var source = Queryable.from(evaluate(expr.source()));
+        var keySelector = expr.keySelector();
         if (expr.descending()) {
-            return source.orderByDescending((net.linjq.functional.KeySelector) expr.keySelector());
+            return source.orderByDescending((net.linjq.functional.KeySelector) keySelector);
         } else {
-            return source.orderBy((net.linjq.functional.KeySelector) expr.keySelector());
+            return source.orderBy((net.linjq.functional.KeySelector) keySelector);
         }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private <T> Iterable<T> evaluateThenBy(ThenByExpression<T, ?> expr) {
-        // The source of a ThenBy must be an OrderBy or another ThenBy
-        var parentResult = evaluate(expr.source());
-        // Since we evaluated the parent, it's already sorted — we need to re-sort with compound key
-        // For in-memory, we delegate to the parent Queryable which handles this
-        var parentQueryable = Queryable.from(parentResult);
-        if (expr.descending()) {
-            return parentQueryable.orderByDescending((net.linjq.functional.KeySelector) expr.keySelector());
-        } else {
-            return parentQueryable.orderBy((net.linjq.functional.KeySelector) expr.keySelector());
-        }
+        // Build the full comparator chain by walking up the tree
+        Comparator<T> comparator = buildComparator(expr);
+        // Evaluate the deepest source (before any ordering) and sort with the composed comparator
+        QueryExpression<T> deepest = findPreOrderSource(expr);
+        var source = Queryable.from(evaluate(deepest));
+        return new OrderedQueryable<>(source, comparator);
+    }
+
+    /**
+     * Walks up the chain of OrderBy/ThenBy expressions and composes a single Comparator.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private <T> Comparator<T> buildComparator(QueryExpression<T> expr) {
+        return switch (expr) {
+            case OrderByExpression<T, ?> e -> {
+                var ks = e.keySelector();
+                Comparator<T> cmp = (a, b) -> {
+                    try { return ((Comparable) ks.select(a)).compareTo(ks.select(b)); }
+                    catch (Exception ex) { throw propagate(ex); }
+                };
+                yield e.descending() ? cmp.reversed() : cmp;
+            }
+            case ThenByExpression<T, ?> e -> {
+                Comparator<T> parent = buildComparator((QueryExpression<T>) e.source());
+                var ks = e.keySelector();
+                Comparator<T> secondary = (a, b) -> {
+                    try { return ((Comparable) ks.select(a)).compareTo(ks.select(b)); }
+                    catch (Exception ex) { throw propagate(ex); }
+                };
+                yield parent.thenComparing(e.descending() ? secondary.reversed() : secondary);
+            }
+            default -> throw new LinjqException("Expected OrderBy or ThenBy expression, got: " + expr.type());
+        };
+    }
+
+    /**
+     * Finds the source expression before any OrderBy/ThenBy chain.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> QueryExpression<T> findPreOrderSource(QueryExpression<T> expr) {
+        return switch (expr) {
+            case OrderByExpression<T, ?> e -> (QueryExpression<T>) e.source();
+            case ThenByExpression<T, ?> e -> findPreOrderSource((QueryExpression<T>) e.source());
+            default -> expr;
+        };
     }
 }
