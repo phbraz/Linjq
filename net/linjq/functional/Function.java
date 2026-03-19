@@ -8,5 +8,5 @@ package net.linjq.functional;
  */
 @FunctionalInterface
 public interface Function<T, R> {
-    R apply(T t);
+    R apply(T t) throws Exception;
 }

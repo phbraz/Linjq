@@ -7,5 +7,5 @@ package net.linjq.functional;
  */
 @FunctionalInterface
 public interface Predicate<T> {
-    boolean test(T t);
+    boolean test(T t) throws Exception;
 }
