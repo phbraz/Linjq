@@ -73,6 +73,8 @@ You can also use `from(...)` directly if you prefer.
 | `Queryable.from(Iterable<T>)` | Same, without static import. |
 | `ProviderQueryable.from(QueryProvider, Iterable<T>)` | Provider-backed query (builds expression tree). |
 | `ProviderQueryable.from(QueryProvider, Iterable<T>, String alias)` | Same with a source alias (e.g. table name). |
+| `Linjq.fromDb(DataSource, Class<T>, String)` | Database-backed query via JDBC (`DbQueryable<T>`). |
+| `Linjq.fromDb(Connection, Class<T>, String)` | Same, using a caller-managed JDBC connection. |
 
 **Example — in-memory (with static import):**
 
@@ -88,6 +90,59 @@ var query = from(List.of(1, 2, 3, 4, 5));
 var provider = new InMemoryQueryProvider();
 var query = ProviderQueryable.from(provider, people, "people");
 QueryExpression<?> expr = query.getExpression(); // inspect tree
+```
+
+---
+
+### Database-backed queries (`DbQueryable`)
+
+`DbQueryable<T>` translates a subset of operations to SQL and executes the rest in-memory after fetching rows.
+
+SQL-translated operations: `where`, `orderBy` / `orderByDescending`, `thenBy` / `thenByDescending`, `take`, `skip`, `distinct`.
+Client-side operations: `select`, `selectMany`, `groupBy`, joins, and all other `Queryable` methods.
+
+#### `fromDb(...)`
+
+```java
+import static net.linjq.Linjq.fromDb;
+import static net.linjq.db.Condition.*;
+
+record Person(int id, String name, Integer age, String city, Boolean active) {}
+
+// Use a DataSource (each execution opens/closes its own connection)
+DbQueryable<Person> people = fromDb(ds, Person.class, "people");
+
+var query =
+    people
+        .where(Person::age, greaterThanOrEqual(25))
+        .where(Person::city, eq("London"))
+        .orderBy(Person::name)
+        .take(10);
+
+// Inspect generated SQL (parameterized)
+String sql = query.toSql();
+List<Object> params = query.toSqlParams();
+
+// Materialize / continue in-memory
+List<String> names = query
+    .select(Person::name)
+    .toList();
+```
+
+#### `Condition` DSL (`where(PropertyRef, Condition)`)
+
+`DbQueryable.where` does not take a Java `Predicate`; instead it takes:
+
+- a `PropertyRef` (method reference) to infer the column name
+- a `Condition` to build a parameterized SQL `WHERE` fragment
+
+Conditions can be combined with `and(...)`, `or(...)`, and `not()`.
+
+```java
+var q = fromDb(ds, Person.class, "people")
+    .where(Person::age, greaterThan(20).and(lessThan(40))) // (age > ? AND age < ?)
+    .where(Person::city, in("London", "Paris"))            // city IN (?, ?)
+    .where(Person::active, isNull());                       // active IS NULL
 ```
 
 ---
@@ -139,6 +194,20 @@ from(words)
 from(people)
     .selectMany(p -> List.of(p.name(), p.city()))
     .toList();
+```
+
+#### `selectManyIndexed(BiFunction<T, Integer, Iterable<R>>)`
+
+Like `selectMany`, but the selector also receives the *0-based index* of the outer element.
+
+```java
+var result = from(List.of("ab", "c"))
+    .selectManyIndexed((s, i) ->
+        s.chars()
+         .mapToObj(ch -> (char) ch + String.valueOf(i))
+         .toList())
+    .toList();
+// example output: ["a0","b0","c1"]
 ```
 
 ---
@@ -358,6 +427,19 @@ from(List.of(1, 2, 3)).reverse().toList();  // [3, 2, 1]
 |--------|-------------|
 | `toList()` | Materializes the query into a `List<T>`. |
 | `first()` | Returns the first element; throws `NoSuchElementException` if empty. |
+| `firstOrDefault()` | Returns `Optional<T>`: first element if present, otherwise empty. |
+| `single()` | Returns the only element; throws if empty or if more than one element exists. |
+| `singleOrDefault()` | Returns `Optional<T>`: the only element if present, otherwise empty (throws if more than one). |
+| `count()` | Counts elements in the sequence. |
+| `any()` | Returns `true` if the sequence has at least one element. |
+| `any(Predicate<T>)` | Returns `true` if at least one element matches the predicate. |
+| `all(Predicate<T>)` | Returns `true` if all elements match the predicate (vacuously `true` for empty sequences). |
+| `contains(T)` | Returns `true` if the sequence contains an element equal to the given value (`equals`). |
+| `minBy(Function<T, R>)` | Returns the element with the minimum key (`R` must be `Comparable`), or empty if the sequence is empty. |
+| `maxBy(Function<T, R>)` | Returns the element with the maximum key (`R` must be `Comparable`), or empty if the sequence is empty. |
+| `aggregate(R seed, BiFunction<R, T, R>)` | Folds the sequence starting from `seed` using an accumulator function. |
+| `toLookup(Function<T, K>)` | Groups elements by key into a `Lookup<K, T>` (insertion-order keys). |
+| `toLookup(Function<T, K>, Function<T, V>)` | Same, but transforms elements as they are added to each group. |
 | `iterator()` | Returns an iterator (e.g. for `for (T x : query)`). |
 
 ```java
@@ -366,13 +448,19 @@ Person first = from(people).orderBy(Person::name).first();
 for (Person p : from(people).take(5)) {
     // ...
 }
+
+var firstOrDefault = from(people).where(p -> p.age() > 100).firstOrDefault();
+int count = from(people).where(p -> p.city().equals("London")).count();
+
+var lookup = from(people).toLookup(Person::city);
+List<Person> londoners = lookup.get("London").toList();
 ```
 
 ---
 
 ## Provider model and expression trees
 
-When you use `ProviderQueryable`, each call (e.g. `where`, `select`, `take`) does **not** run the query; it adds a node to an **expression tree**. Execution happens only when you iterate or call a terminal method (`toList()`, `first()`, etc.), and the **QueryProvider** is responsible for running the tree.
+When you use `ProviderQueryable`, each call (e.g. `where`, `select`, `take`) does **not** run the query; it adds a node to an **expression tree**. Execution happens only when you iterate or call a terminal method (e.g. `toList()`, `first()`, `single()`, `count()`, etc.), and the **QueryProvider** is responsible for running the tree.
 
 ### InMemoryQueryProvider
 
