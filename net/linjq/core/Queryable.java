@@ -109,6 +109,13 @@ public class Queryable<T> implements Iterable<T> {
         } catch (Exception e) { throw propagate(e); }
     }
 
+    public boolean contains(T element) {
+        for (T t : source) {
+            if (Objects.equals(t, element)) return true;
+        }
+        return false;
+    }
+
     public boolean all(Predicate<T> predicate) {
         Objects.requireNonNull(predicate);
         try {

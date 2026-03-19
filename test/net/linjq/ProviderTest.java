@@ -521,6 +521,13 @@ class ProviderTest {
         }
 
         @Test
+        void contains_present_returnsTrue_absent_returnsFalse() {
+            var query = ProviderQueryable.from(PROVIDER, PEOPLE).where(p -> p.city().equals("London"));
+            assertTrue(query.contains(new Person("Alice", 30, "London")));
+            assertFalse(query.contains(new Person("Bob", 25, "Paris")));
+        }
+
+        @Test
         void any_nonEmpty_returnsTrue() {
             assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE).any());
             assertTrue(ProviderQueryable.from(PROVIDER, PEOPLE).where(p -> p.age() >= 25).any());
