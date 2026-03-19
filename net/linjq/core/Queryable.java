@@ -168,6 +168,16 @@ public class Queryable<T> implements Iterable<T> {
         } catch (Exception e) { throw propagate(e); }
     }
 
+    // ─── Lookup ──────────────────────────────────────────────────────────
+
+    public <K> Lookup<K, T> toLookup(Function<T, K> keySelector) {
+        return Lookup.create(source, keySelector);
+    }
+
+    public <K, V> Lookup<K, V> toLookup(Function<T, K> keySelector, Function<T, V> elementSelector) {
+        return Lookup.create(source, keySelector, elementSelector);
+    }
+
     // ─── Filtering & projection ───────────────────────────────────────────
 
     public Queryable<T> where(Predicate<T> predicate) {
