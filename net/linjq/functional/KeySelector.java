@@ -8,5 +8,5 @@ package net.linjq.functional;
  */
 @FunctionalInterface
 public interface KeySelector<T, K extends Comparable<K>> {
-    K select(T t);
+    K select(T t) throws Exception;
 }

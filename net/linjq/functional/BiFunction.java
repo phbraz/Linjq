@@ -9,5 +9,5 @@ package net.linjq.functional;
  */
 @FunctionalInterface
 public interface BiFunction<T, U, R> {
-    R apply(T t, U u);
+    R apply(T t, U u) throws Exception;
 }
