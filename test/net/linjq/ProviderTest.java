@@ -1,5 +1,7 @@
 package net.linjq;
 
+import net.linjq.core.Grouping;
+import net.linjq.core.Lookup;
 import net.linjq.core.Queryable;
 import net.linjq.expression.*;
 import net.linjq.provider.InMemoryQueryProvider;
@@ -640,6 +642,102 @@ class ProviderTest {
                     .aggregate(42, Integer::sum);
 
             assertEquals(42, result);
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    //  toLookup
+    // ═══════════════════════════════════════════════
+
+    @Nested
+    class ToLookupTests {
+        @Test
+        void toLookup_keySelector_groupsByKey() {
+            Lookup<String, Person> lookup = Queryable.from(PEOPLE).toLookup(Person::city);
+
+            assertEquals(3, lookup.size());
+            assertTrue(lookup.containsKey("London"));
+            assertTrue(lookup.containsKey("Paris"));
+            assertTrue(lookup.containsKey("Berlin"));
+
+            var londoners = lookup.get("London").toList();
+            assertEquals(2, londoners.size());
+            assertTrue(londoners.stream().allMatch(p -> "London".equals(p.city())));
+            assertTrue(londoners.stream().anyMatch(p -> p.name().equals("Alice")));
+            assertTrue(londoners.stream().anyMatch(p -> p.name().equals("Charlie")));
+
+            var paris = lookup.get("Paris").toList();
+            assertEquals(2, paris.size());
+            assertTrue(paris.stream().allMatch(p -> "Paris".equals(p.city())));
+        }
+
+        @Test
+        void toLookup_keySelector_getMissingKey_returnsEmpty() {
+            Lookup<String, Person> lookup = Queryable.from(PEOPLE).toLookup(Person::city);
+
+            assertFalse(lookup.containsKey("Rome"));
+            var empty = lookup.get("Rome").toList();
+            assertTrue(empty.isEmpty());
+        }
+
+        @Test
+        void toLookup_keySelector_keysPreserveInsertionOrder() {
+            Lookup<String, Person> lookup = Queryable.from(PEOPLE).toLookup(Person::city);
+
+            var keys = lookup.keys().toList();
+            assertEquals(List.of("London", "Paris", "Berlin"), keys);
+        }
+
+        @Test
+        void toLookup_keySelector_iteratesGroupingsInKeyOrder() {
+            Lookup<String, Person> lookup = Queryable.from(PEOPLE).toLookup(Person::city);
+
+            var keys = new ArrayList<String>();
+            var counts = new ArrayList<Integer>();
+            for (Grouping<String, Person> group : lookup) {
+                keys.add(group.key());
+                counts.add(Queryable.from(group).toList().size());
+            }
+            assertEquals(List.of("London", "Paris", "Berlin"), keys);
+            assertEquals(List.of(2, 2, 1), counts);
+        }
+
+        @Test
+        void toLookup_keySelector_elementSelector_transformsElements() {
+            Lookup<String, String> lookup = Queryable.from(PEOPLE)
+                    .toLookup(Person::city, Person::name);
+
+            assertEquals(3, lookup.size());
+            var londonNames = lookup.get("London").toList();
+            assertEquals(List.of("Alice", "Charlie"), londonNames);
+
+            var parisNames = lookup.get("Paris").toList();
+            assertEquals(List.of("Bob", "Eve"), parisNames);
+
+            var berlinNames = lookup.get("Berlin").toList();
+            assertEquals(List.of("Diana"), berlinNames);
+        }
+
+        @Test
+        void toLookup_emptySource_returnsEmptyLookup() {
+            Lookup<String, Person> lookup = Queryable.from(List.<Person>of()).toLookup(Person::city);
+
+            assertEquals(0, lookup.size());
+            assertFalse(lookup.containsKey("London"));
+            assertTrue(lookup.get("London").toList().isEmpty());
+            assertTrue(lookup.keys().toList().isEmpty());
+        }
+
+        @Test
+        void toLookup_viaProviderQueryable() {
+            Lookup<String, Person> lookup = ProviderQueryable.from(PROVIDER, PEOPLE)
+                    .toLookup(Person::city);
+
+            assertEquals(3, lookup.size());
+            var londoners = lookup.get("London").toList();
+            assertEquals(2, londoners.size());
+            assertTrue(lookup.containsKey("Berlin"));
+            assertTrue(lookup.get("Rome").toList().isEmpty());
         }
     }
 }
